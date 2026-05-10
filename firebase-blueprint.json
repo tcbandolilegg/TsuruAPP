@@ -1,0 +1,68 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "System users and their profile information",
+      "type": "object",
+      "properties": {
+        "fullName": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "userType": { "type": "string", "enum": ["user", "superadmin"] },
+        "cpf": { "type": "string" },
+        "rg": { "type": "string" },
+        "cep": { "type": "string" },
+        "address": { "type": "string" },
+        "number": { "type": "string" },
+        "complement": { "type": "string" },
+        "neighborhood": { "type": "string" },
+        "city": { "type": "string" },
+        "state": { "type": "string" },
+        "birthDate": { "type": "string", "format": "date" },
+        "motherName": { "type": "string" },
+        "plan": { "type": "string" },
+        "billingCycle": { "type": "string", "enum": ["mensal", "anual"] },
+        "validityDate": { "type": "string", "format": "date" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["fullName", "email", "userType", "cpf", "birthDate", "plan", "billingCycle", "validityDate"]
+    },
+    "Admin": {
+      "title": "Admin",
+      "description": "Users with administrative privileges",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "format": "email" }
+      },
+      "required": ["email"]
+    },
+    "Lead": {
+      "title": "Lead",
+      "description": "Contact messages from potential customers",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "phone": { "type": "string" },
+        "situation": { "type": "string", "enum": ["duvida", "problema", "denuncia", "sugestao", "elogio"] },
+        "description": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "email", "phone", "situation", "description", "createdAt"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "User",
+      "description": "Collection of users registered in the system"
+    },
+    "admins/{userId}": {
+      "schema": "Admin",
+      "description": "Registry of administrative users"
+    },
+    "leads/{leadId}": {
+      "schema": "Lead",
+      "description": "Contact form submissions"
+    }
+  }
+}

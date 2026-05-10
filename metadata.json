@@ -1,0 +1,6 @@
+{
+  "name": "TSURU APP",
+  "description": "Plataforma para gerenciamento de histórico médico familiar, exames e registros de saúde com foco em longevidade e simplicidade.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}

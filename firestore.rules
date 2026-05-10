@@ -1,0 +1,93 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // 3. Primitive Definitions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isEmailVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && isEmailVerified() && (
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        request.auth.token.email == 'tcbandolilegg@gmail.com'
+      );
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // 2. Validation Blueprints
+    function isValidUser(data) {
+      return data.keys().hasAll(['fullName', 'email', 'userType', 'cpf', 'birthDate', 'plan', 'billingCycle', 'validityDate']) &&
+             data.fullName is string && data.fullName.size() <= 200 &&
+             data.email is string && data.email.size() <= 200 &&
+             data.userType in ['user', 'superadmin'] &&
+             data.cpf is string && data.cpf.size() <= 20 &&
+             data.plan is string && data.plan.size() <= 100 &&
+             data.billingCycle in ['mensal', 'anual'] &&
+             data.validityDate is string && data.validityDate.size() <= 10;
+    }
+
+    function isValidLead(data) {
+      return data.keys().hasAll(['name', 'email', 'phone', 'situation', 'description', 'createdAt']) &&
+             data.name is string && data.name.size() <= 200 &&
+             data.email is string && data.email.size() <= 200 &&
+             data.phone is string && data.phone.size() <= 30 &&
+             data.situation in ['duvida', 'problema', 'denuncia', 'sugestao', 'elogio'] &&
+             data.description is string && data.description.size() <= 2000 &&
+             data.createdAt == request.time;
+    }
+
+    match /users/{userId} {
+      allow get: if (isOwner(userId) || isAdmin()) && isValidId(userId);
+      allow list: if isAdmin();
+      
+      allow create: if isOwner(userId) && isValidId(userId) && 
+                      isValidUser(incoming()) && 
+                      incoming().userType == 'user' &&
+                      incoming().email == request.auth.token.email;
+
+      allow update: if (isOwner(userId) || isAdmin()) && isValidId(userId) && 
+                      isValidUser(incoming()) && (
+                        isAdmin() || (
+                          incoming().userType == existing().userType &&
+                          incoming().email == existing().email &&
+                          incoming().diff(existing()).affectedKeys().hasOnly(['fullName', 'address', 'number', 'complement', 'neighborhood', 'city', 'state', 'updatedAt'])
+                        )
+                      );
+      
+      allow delete: if isAdmin() && isValidId(userId);
+    }
+
+    match /admins/{userId} {
+      allow read, write: if isAdmin() && isValidId(userId);
+    }
+
+    match /leads/{leadId} {
+      allow create: if isValidLead(incoming()) && isValidId(leadId);
+      allow get, list, delete: if isAdmin();
+    }
+  }
+}
