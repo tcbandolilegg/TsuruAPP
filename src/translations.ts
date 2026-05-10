@@ -96,6 +96,82 @@ export const translations = {
       button: "Create free account",
       contact: "Talk to consultant"
     },
+    plans: {
+      title: "Choose your Plan",
+      subtitle: "Select the best option to take care of your health with peace of mind.",
+      monthly: "Per month",
+      annual: "Annual",
+      acquire: "Acquire",
+      dopamina: {
+        name: "DOPAMINE",
+        price: "$ 9.49",
+        priceAnnual: "$ 94.90",
+        priceNote: "",
+        trial: "3 first months free*",
+        features: [
+          "Access to lists of professionals and institutions",
+          "Consultation or exam scheduling - up to 5",
+          "Continuous use medication alert - only 1",
+          "Clinical analysis laboratory exam - only 1",
+          "Pathological analysis laboratory exams - only 1",
+          "Medical portfolio"
+        ],
+        disabled: [
+          "Exam video records",
+          "Surgery video records"
+        ]
+      },
+      ocitocina: {
+        name: "OXYTOCIN",
+        price: "$ 16.49",
+        priceAnnual: "$ 164.90",
+        features: [
+          "Access to lists of professionals and institutions",
+          "Consultation or exam scheduling - up to 15",
+          "Continuous use medication alert - up to 7",
+          "Clinical analysis laboratory exam - up to 3",
+          "Pathological analysis laboratory exams - up to 3",
+          "Medical portfolio",
+          "Exam video records - only 1"
+        ],
+        disabled: [
+          "Surgery video records"
+        ]
+      },
+      serotonina: {
+        name: "SEROTONIN",
+        price: "$ 36.49",
+        priceAnnual: "$ 364.90",
+        features: [
+          "Access to lists of professionals and institutions",
+          "Consultation or exam scheduling - up to 30",
+          "Continuous use medication alert - up to 15",
+          "Clinical analysis laboratory exam - up to 4",
+          "Pathological analysis laboratory exams - up to 5",
+          "Medical portfolio",
+          "Exam video records - up to 3"
+        ],
+        disabled: [
+          "Surgery video records"
+        ]
+      },
+      endorfina: {
+        name: "ENDORPHIN",
+        price: "$ 126.49",
+        priceAnnual: "$ 1,264.90",
+        features: [
+          "Access to lists of professionals and institutions",
+          "Consultation or exam scheduling - unlimited",
+          "Continuous use medication alert - unlimited",
+          "Clinical analysis laboratory exam - up to 12",
+          "Pathological analysis laboratory exams - up to 12",
+          "Medical portfolio",
+          "Exam video records - up to 5",
+          "Surgery video records - only 1"
+        ],
+        disabled: []
+      }
+    },
     footer: {
       description: "The sacred bird of Japan, symbol of health and longevity. Your medical history managed with intelligence and care.",
       platform: "Platform",
@@ -118,8 +194,8 @@ export const translations = {
       blog: "BLOG",
       contactUs: "FALE CONOSCO",
       search: "Pesquise",
-      symbol: "COMMON SYMBOL",
-      longevity: "Longevidade",
+      symbol: "O Símbolo",
+      longevity: "Saúde e Longevidade",
       loginGoogle: "Continuar com Google",
       or: "Ou",
       emailOrCpf: "E-mail ou CPF",
@@ -145,8 +221,10 @@ export const translations = {
       acquire: "Adquirir",
       dopamina: {
         name: "DOPAMINA",
-        price: "Free",
-        trial: "3 meses grátis",
+        price: "R$ 9,49",
+        priceAnnual: "R$ 94,90",
+        priceNote: "",
+        trial: "3 primeiros meses grátis*",
         features: [
           "Acesso a lista de profissionais e instituições",
           "Agendamento de consultas ou exames - até 5",
@@ -160,10 +238,10 @@ export const translations = {
           "Registro de vídeo cirurgias"
         ]
       },
-      oxitocina: {
-        name: "OXITOCINA",
-        price: "R$ 15,00",
-        priceAnnual: "R$ 150,00",
+      ocitocina: {
+        name: "OCITOCINA",
+        price: "R$ 16,49",
+        priceAnnual: "R$ 164,90",
         features: [
           "Acesso a lista de profissionais e instituições",
           "Agendamento de consultas ou exames - até 15",
@@ -177,10 +255,10 @@ export const translations = {
           "Registro de vídeo cirurgias"
         ]
       },
-      seratonina: {
-        name: "SERATONINA",
-        price: "R$ 35,00",
-        priceAnnual: "R$ 350,00",
+      serotonina: {
+        name: "SEROTONINA",
+        price: "R$ 36,49",
+        priceAnnual: "R$ 364,90",
         features: [
           "Acesso a lista de profissionais e instituições",
           "Agendamento de consultas ou exames - até 30",
@@ -196,8 +274,8 @@ export const translations = {
       },
       endorfina: {
         name: "ENDORFINA",
-        price: "R$ 100,00",
-        priceAnnual: "R$ 1000,00",
+        price: "R$ 126,49",
+        priceAnnual: "R$ 1.264,90",
         features: [
           "Acesso a lista de profissionais e instituições",
           "Agendamento de consultas ou exames - ilimitado",

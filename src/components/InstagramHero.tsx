@@ -65,8 +65,8 @@ export default function InstagramHero({ onRegister, onAccess }: InstagramHeroPro
             >
               <TsuruLogo className="w-14 h-14" />
               <div className="text-left">
-                <div className="text-[10px] text-tsuru-blue font-bold uppercase tracking-tighter leading-none mb-1">{t('common.symbol')}</div>
-                <div className="font-serif italic text-lg text-tsuru-navy leading-none">{t('common.longevity')}</div>
+                <div className="text-[14px] text-tsuru-blue font-semibold leading-none mb-2">{t('common.symbol')}</div>
+                <div className="font-serif italic text-2xl text-tsuru-navy leading-tight">{t('common.longevity')}</div>
               </div>
             </motion.div>
 

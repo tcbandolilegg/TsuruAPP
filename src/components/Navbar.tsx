@@ -23,7 +23,6 @@ export default function Navbar({
 }) {
   const { t, i18n } = useTranslation();
   const [isLangOpen, setIsLangOpen] = useState(false);
-  const [isGetStartedOpen, setIsGetStartedOpen] = useState(false);
 
   const changeLanguage = (code: string) => {
     i18n.changeLanguage(code);
@@ -86,49 +85,6 @@ export default function Navbar({
                       {lang.flag}
                     </button>
                   ))}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-
-          <div className="relative">
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => setIsGetStartedOpen(!isGetStartedOpen)}
-              className="bg-tsuru-blue text-white px-6 py-2.5 rounded-full text-sm font-semibold tracking-wide hover:shadow-lg hover:shadow-tsuru-blue/20 transition-all whitespace-nowrap flex items-center gap-2"
-              id="nav-cta"
-            >
-              {t('common.getStarted')}
-              <ChevronDown className={`w-4 h-4 transition-transform ${isGetStartedOpen ? 'rotate-180' : ''}`} />
-            </motion.button>
-
-            <AnimatePresence>
-              {isGetStartedOpen && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 10 }}
-                  className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-2xl border border-tsuru-blue/10 overflow-hidden py-2"
-                >
-                  <button
-                    onClick={() => {
-                      onRegister();
-                      setIsGetStartedOpen(false);
-                    }}
-                    className="w-full text-left px-4 py-2 text-sm text-tsuru-navy hover:bg-tsuru-blue/5 transition-colors font-medium rounded-lg"
-                  >
-                    {t('common.register')}
-                  </button>
-                  <button
-                    onClick={() => {
-                      onAccess();
-                      setIsGetStartedOpen(false);
-                    }}
-                    className="w-full text-left px-4 py-2 text-sm text-tsuru-navy hover:bg-tsuru-blue/5 transition-colors font-medium rounded-lg"
-                  >
-                    {t('common.login')}
-                  </button>
                 </motion.div>
               )}
             </AnimatePresence>

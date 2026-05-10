@@ -7,6 +7,7 @@ interface PlanProps {
   name: string;
   price: string;
   priceAnnual?: string;
+  priceNote?: string;
   trial?: string;
   features: string[];
   disabled: string[];
@@ -15,7 +16,7 @@ interface PlanProps {
   key?: string | number;
 }
 
-function PlanCard({ name, price, priceAnnual, trial, features, disabled, onSelect, isPopular }: PlanProps) {
+function PlanCard({ name, price, priceAnnual, priceNote, trial, features, disabled, onSelect, isPopular }: PlanProps) {
   const { t } = useTranslation();
   const [isAnnual, setIsAnnual] = useState(false);
 
@@ -33,7 +34,10 @@ function PlanCard({ name, price, priceAnnual, trial, features, disabled, onSelec
           <div className="text-5xl font-bold text-tsuru-blue mb-1">
             {isAnnual && priceAnnual ? priceAnnual : price}
           </div>
-          <p className="text-tsuru-muted text-sm">{trial || t('plans.monthly')}</p>
+          <p className={`mb-1 ${trial ? 'text-black text-base font-bold' : 'text-tsuru-muted text-sm'}`}>
+            {trial || t('plans.monthly')}
+          </p>
+          {priceNote && <p className="text-[10px] text-tsuru-blue font-semibold">{priceNote}</p>}
         </div>
 
         {priceAnnual ? (
@@ -96,8 +100,8 @@ export default function Plans({ onSelectPlan }: { onSelectPlan: (plan: string) =
 
   const planData = [
     { key: 'dopamina', isPopular: false },
-    { key: 'oxitocina', isPopular: false },
-    { key: 'seratonina', isPopular: true },
+    { key: 'ocitocina', isPopular: false },
+    { key: 'serotonina', isPopular: true },
     { key: 'endorfina', isPopular: false },
   ];
 
@@ -115,6 +119,7 @@ export default function Plans({ onSelectPlan }: { onSelectPlan: (plan: string) =
               name={t(`plans.${plan.key}.name`)}
               price={t(`plans.${plan.key}.price`)}
               priceAnnual={i18n.exists(`plans.${plan.key}.priceAnnual`) ? t(`plans.${plan.key}.priceAnnual`) : undefined}
+              priceNote={i18n.exists(`plans.${plan.key}.priceNote`) ? t(`plans.${plan.key}.priceNote`) : undefined}
               trial={t(`plans.${plan.key}.trial`, { defaultValue: '' })}
               features={t(`plans.${plan.key}.features`, { returnObjects: true }) as string[]}
               disabled={t(`plans.${plan.key}.disabled`, { returnObjects: true }) as string[]}
