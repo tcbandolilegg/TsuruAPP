@@ -46,7 +46,7 @@ export default function Navbar({
         </motion.div>
         
         <div className="hidden lg:flex items-center gap-8 text-xs font-bold uppercase tracking-widest text-tsuru-navy">
-          <button onClick={onRegister} className="hover:text-tsuru-blue transition-colors">{t('common.plans')}</button>
+          <button onClick={onRegister} className="hover:text-tsuru-blue transition-colors cursor-pointer">{t('common.plans')}</button>
         </div>
 
         <div className="flex items-center gap-4">

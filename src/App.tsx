@@ -9,10 +9,11 @@ import InstagramHero from "./components/InstagramHero";
 import RegistrationForm from "./components/RegistrationForm";
 import Plans from "./components/Plans";
 import ContactModal from "./components/ContactModal";
+import Footer from "./components/Footer";
 
 export default function App() {
   const [isContactOpen, setIsContactOpen] = useState(false);
-  const [view, setView] = useState<'home' | 'plans' | 'registration'>('home');
+  const [view, setView] = useState<'home' | 'plans' | 'registration'>('plans');
   const [selectedPlan, setSelectedPlan] = useState('dopamina');
   const [isLoginIntent, setIsLoginIntent] = useState(false);
 
@@ -62,6 +63,11 @@ export default function App() {
         <RegistrationForm selectedPlan={selectedPlan} isLoginIntent={isLoginIntent} />
       )}
 
+      <Footer 
+        onOpenContact={() => setIsContactOpen(true)} 
+        onLogoClick={goToHome}
+        onRegister={goToPlans}
+      />
       <ContactModal isOpen={isContactOpen} onClose={() => setIsContactOpen(false)} />
     </main>
   );

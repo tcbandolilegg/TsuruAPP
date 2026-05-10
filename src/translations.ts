@@ -101,7 +101,7 @@ export const translations = {
       subtitle: "Select the best option to take care of your health with peace of mind.",
       monthly: "Per month",
       annual: "Annual",
-      acquire: "Acquire",
+      acquire: "Choose",
       dopamina: {
         name: "DOPAMINE",
         price: "$ 9.49",
@@ -218,7 +218,7 @@ export const translations = {
       subtitle: "Selecione a melhor opção para cuidar da sua saúde com tranquilidade.",
       monthly: "Por mês",
       annual: "Anual",
-      acquire: "Adquirir",
+      acquire: "Escolher",
       dopamina: {
         name: "DOPAMINA",
         price: "R$ 9,49",
