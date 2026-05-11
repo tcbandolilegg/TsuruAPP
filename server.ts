@@ -3,12 +3,16 @@ import { createServer as createViteServer } from "vite";
 import path from "path";
 import { fileURLToPath } from "url";
 
-// Compatibility for both ESM and CJS bundling
-const __filename = typeof import.meta !== 'undefined' && import.meta.url
-  ? fileURLToPath(import.meta.url)
-  : (typeof __filename !== 'undefined' ? __filename : '');
+// Support for both ESM and CJS
+const getDirname = () => {
+  try {
+    return path.dirname(fileURLToPath(import.meta.url));
+  } catch {
+    return typeof __dirname !== 'undefined' ? __dirname : process.cwd();
+  }
+};
 
-const __dirname = path.dirname(__filename) || process.cwd();
+const _dirname = getDirname();
 
 async function startServer() {
   try {
