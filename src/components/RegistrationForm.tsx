@@ -421,8 +421,8 @@ export default function RegistrationForm({ selectedPlan, isLoginIntent }: Regist
                     onChange={e => setFormData(p => ({...p, plan: e.target.value}))}
                   >
                     <option value="dopamina" className="text-tsuru-ink">{t('plans.dopamina.name')}</option>
-                    <option value="oxitocina" className="text-tsuru-ink">{t('plans.oxitocina.name')}</option>
-                    <option value="seratonina" className="text-tsuru-ink">{t('plans.seratonina.name')}</option>
+                    <option value="ocitocina" className="text-tsuru-ink">{t('plans.ocitocina.name')}</option>
+                    <option value="serotonina" className="text-tsuru-ink">{t('plans.serotonina.name')}</option>
                     <option value="endorfina" className="text-tsuru-ink">{t('plans.endorfina.name')}</option>
                   </select>
                   <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 w-4 h-4 text-white pointer-events-none" />

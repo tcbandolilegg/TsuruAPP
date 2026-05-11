@@ -12,12 +12,10 @@ const languages = [
 
 export default function Navbar({ 
   onOpenContact, 
-  onRegister, 
   onAccess, 
   onLogoClick 
 }: { 
   onOpenContact: () => void, 
-  onRegister: () => void, 
   onAccess: () => void, 
   onLogoClick: () => void 
 }) {
@@ -46,18 +44,9 @@ export default function Navbar({
         </motion.div>
         
         <div className="hidden lg:flex items-center gap-8 text-xs font-bold uppercase tracking-widest text-tsuru-navy">
-          <button onClick={onRegister} className="hover:text-tsuru-blue transition-colors cursor-pointer">{t('common.plans')}</button>
         </div>
 
         <div className="flex items-center gap-4">
-          <div className="hidden xl:block relative group">
-            <input 
-              type="text" 
-              placeholder={t('common.search')}
-              className="bg-tsuru-blue/5 border border-tsuru-blue/10 rounded-lg px-4 py-2 text-sm outline-none focus:ring-2 focus:ring-tsuru-blue/20 transition-all w-32 focus:w-48"
-            />
-          </div>
-
           <div className="relative">
             <button 
               onClick={() => setIsLangOpen(!isLangOpen)}

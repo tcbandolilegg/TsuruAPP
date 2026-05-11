@@ -7,19 +7,19 @@ import { useState } from "react";
 import Navbar from "./components/Navbar";
 import InstagramHero from "./components/InstagramHero";
 import RegistrationForm from "./components/RegistrationForm";
-import Plans from "./components/Plans";
 import ContactModal from "./components/ContactModal";
 import Footer from "./components/Footer";
 
 export default function App() {
   const [isContactOpen, setIsContactOpen] = useState(false);
-  const [view, setView] = useState<'home' | 'plans' | 'registration'>('plans');
+  const [view, setView] = useState<'home' | 'plans' | 'registration'>('home');
   const [selectedPlan, setSelectedPlan] = useState('dopamina');
   const [isLoginIntent, setIsLoginIntent] = useState(false);
 
   const goToPlans = () => {
     setIsLoginIntent(false);
-    setView('plans');
+    setSelectedPlan('dopamina');
+    setView('registration');
     window.scrollTo(0, 0);
   };
 
@@ -46,17 +46,12 @@ export default function App() {
     <main className="min-h-screen">
       <Navbar 
         onOpenContact={() => setIsContactOpen(true)} 
-        onRegister={goToPlans}
         onAccess={handleAccess}
         onLogoClick={goToHome}
       />
       
       {view === 'home' && (
         <InstagramHero onRegister={goToPlans} onAccess={handleAccess} />
-      )}
-
-      {view === 'plans' && (
-        <Plans onSelectPlan={goToRegistration} />
       )}
 
       {view === 'registration' && (
@@ -66,7 +61,6 @@ export default function App() {
       <Footer 
         onOpenContact={() => setIsContactOpen(true)} 
         onLogoClick={goToHome}
-        onRegister={goToPlans}
       />
       <ContactModal isOpen={isContactOpen} onClose={() => setIsContactOpen(false)} />
     </main>
