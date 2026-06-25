@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Camera, MapPin, CreditCard, User, Calendar, FileText, ChevronDown, Check, LogIn, Loader2, Copy, Download, QrCode, Wallet } from "lucide-react";
+import { Camera, MapPin, CreditCard, User, Calendar, FileText, ChevronDown, Check, LogIn, Loader2, Copy, Download, QrCode, Wallet, Eye, EyeOff, Mail, KeyRound } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { signInWithPopup, GoogleAuthProvider, User as FirebaseUser } from 'firebase/auth';
+import { signInWithPopup, GoogleAuthProvider, User as FirebaseUser, createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 import { db, auth, handleFirestoreError, OperationType } from '../lib/firebase';
 import GoogleLoginModal from "./GoogleLoginModal";
 
 interface RegistrationFormProps {
   selectedPlan: string;
   isLoginIntent?: boolean;
+  onRegistrationComplete?: () => void;
 }
 
 const planPrices = {
@@ -19,12 +20,37 @@ const planPrices = {
   endorfina: { mensal: "R$ 126,49", anual: "R$ 1.264,90" }
 };
 
-export default function RegistrationForm({ selectedPlan, isLoginIntent }: RegistrationFormProps) {
+export default function RegistrationForm({ selectedPlan, isLoginIntent, onRegistrationComplete }: RegistrationFormProps) {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [isGoogleModalOpen, setIsGoogleModalOpen] = useState(false);
+  const [localLoginIntent, setLocalLoginIntent] = useState(isLoginIntent);
+
+  // Email and Password States
+  const [emailInput, setEmailInput] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordVisible, setPasswordVisible] = useState(false);
+  const [confirmPasswordVisible, setConfirmPasswordVisible] = useState(false);
+  
+  // Login States
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [loginPasswordVisible, setLoginPasswordVisible] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
+
+  // Password validation checks
+  const hasMinLength = password.length >= 8;
+  const hasNumber = /\d/.test(password);
+  const hasUppercase = /[A-Z]/.test(password);
+  const hasSpecial = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+  const passwordsMatch = password && password === confirmPassword;
+
+  useEffect(() => {
+    setLocalLoginIntent(isLoginIntent);
+  }, [isLoginIntent]);
 
   // Payment States
   const [paymentMethod, setPaymentMethod] = useState<"cartao" | "pix" | "boleto">("cartao");
@@ -125,21 +151,88 @@ export default function RegistrationForm({ selectedPlan, isLoginIntent }: Regist
     setIsGoogleModalOpen(true);
   };
 
+  const handleEmailPasswordLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!loginEmail || !loginPassword) {
+      setLoginError("Por favor, preencha o e-mail e a senha.");
+      return;
+    }
+    
+    setLoading(true);
+    setLoginError(null);
+    try {
+      const result = await signInWithEmailAndPassword(auth, loginEmail, loginPassword);
+      setUser(result.user);
+      if (onRegistrationComplete) {
+        onRegistrationComplete();
+      }
+    } catch (error: any) {
+      console.error("Login error:", error);
+      if (error.code === "auth/invalid-credential" || error.code === "auth/user-not-found" || error.code === "auth/wrong-password") {
+        setLoginError("E-mail ou senha incorretos.");
+      } else if (error.code === "auth/invalid-email") {
+        setLoginError("Endereço de e-mail inválido.");
+      } else {
+        setLoginError("Erro ao fazer login: " + error.message);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) {
-      handleGoogleLogin();
+    
+    let activeUser = user;
+    
+    if (!activeUser) {
+      if (!emailInput) {
+        alert("Por favor, informe seu e-mail para continuar.");
+        return;
+      }
+      if (!hasMinLength || !hasNumber || !hasUppercase || !hasSpecial) {
+        alert("A senha precisa ter no mínimo 8 caracteres, um número, uma letra maiúscula e um caractere especial.");
+        return;
+      }
+      if (password !== confirmPassword) {
+        alert("A confirmação da senha não corresponde à senha digitada.");
+        return;
+      }
+      
+      setSubmitting(true);
+      try {
+        const result = await createUserWithEmailAndPassword(auth, emailInput, password);
+        activeUser = result.user;
+        setUser(activeUser);
+      } catch (error: any) {
+        console.error("Error creating email/password user:", error);
+        if (error.code === "auth/email-already-in-use") {
+          alert("Este e-mail já está cadastrado. Vá em 'Acessar' para fazer login.");
+        } else if (error.code === "auth/invalid-email") {
+          alert("E-mail inválido.");
+        } else if (error.code === "auth/weak-password") {
+          alert("Senha fraca.");
+        } else {
+          alert("Erro ao criar conta: " + error.message);
+        }
+        setSubmitting(false);
+        return;
+      }
+    }
+
+    if (!activeUser) {
+      setSubmitting(false);
       return;
     }
 
     setSubmitting(true);
-    const path = `users/${user.uid}`;
+    const path = `users/${activeUser.uid}`;
     try {
       // Prepare data for Firestore (removing non-serializable fields for now, should handle upload separately if needed)
       const dataToSave = {
         fullName: formData.fullName,
         socialName: formData.socialName,
-        email: user.email,
+        email: activeUser.email,
         race: formData.race,
         gender: formData.gender,
         cep: formData.cep,
@@ -156,7 +249,7 @@ export default function RegistrationForm({ selectedPlan, isLoginIntent }: Regist
         plan: formData.plan,
         billingCycle: formData.billingCycle,
         validityDate: formData.validityDate,
-        userType: formData.userType,
+        userType: activeUser.email === 'tcbandolilegg@gmail.com' ? 'superadmin' : 'user',
         paymentMethod: paymentMethod,
         paymentStatus: paymentMethod === "cartao" ? "pago" : "pendente",
         cardLast4: paymentMethod === "cartao" && cardData.number ? cardData.number.trim().slice(-4) : "",
@@ -164,14 +257,14 @@ export default function RegistrationForm({ selectedPlan, isLoginIntent }: Regist
         updatedAt: serverTimestamp()
       };
 
-      await setDoc(doc(db, 'users', user.uid), dataToSave);
+      await setDoc(doc(db, 'users', activeUser.uid), dataToSave);
 
       // If superadmin, also add to admins collection for rules validation
-      if (formData.userType === 'superadmin') {
-        const adminPath = `admins/${user.uid}`;
+      if (dataToSave.userType === 'superadmin') {
+        const adminPath = `admins/${activeUser.uid}`;
         try {
-          await setDoc(doc(db, 'admins', user.uid), {
-            email: user.email,
+          await setDoc(doc(db, 'admins', activeUser.uid), {
+            email: activeUser.email,
             createdAt: serverTimestamp()
           });
         } catch (adminError) {
@@ -181,6 +274,9 @@ export default function RegistrationForm({ selectedPlan, isLoginIntent }: Regist
       }
 
       alert("Cadastro realizado com sucesso e salvo no banco de dados!");
+      if (onRegistrationComplete) {
+        onRegistrationComplete();
+      }
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, path);
     } finally {
@@ -191,46 +287,121 @@ export default function RegistrationForm({ selectedPlan, isLoginIntent }: Regist
   const inputClass = "w-full px-5 py-4 bg-white border border-tsuru-blue/20 rounded-2xl outline-none focus:ring-2 focus:ring-tsuru-blue/20 transition-all text-tsuru-ink placeholder:text-tsuru-muted/50";
   const labelClass = "block text-xs font-bold text-tsuru-muted uppercase tracking-widest mb-2 ml-1";
 
-  if (isLoginIntent && !user) {
+  if (localLoginIntent && !user) {
     return (
-      <section className="py-32 px-6 bg-tsuru-bg min-h-[60vh] flex items-center justify-center">
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="bg-white p-12 rounded-[3rem] shadow-2xl border border-tsuru-blue/10 max-w-md w-full text-center"
-        >
-          <div className="mb-8">
-            <div className="w-20 h-20 bg-tsuru-blue/10 rounded-3xl flex items-center justify-center mx-auto mb-6">
-              <LogIn className="w-10 h-10 text-tsuru-blue" />
-            </div>
-            <h2 className="text-3xl font-serif font-bold text-tsuru-navy mb-4">{t('common.login')}</h2>
-            <p className="text-tsuru-muted">Acesse seu histórico médico com segurança.</p>
-          </div>
-          
-          <button
-            onClick={handleGoogleLogin}
-            className="w-full py-5 bg-tsuru-navy text-white rounded-2xl font-bold flex items-center justify-center gap-3 hover:bg-tsuru-blue transition-all shadow-xl shadow-tsuru-navy/20"
+      <>
+        <section className="py-32 px-6 bg-tsuru-bg min-h-[60vh] flex items-center justify-center">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white p-8 md:p-12 rounded-[3rem] shadow-2xl border border-tsuru-blue/10 max-w-md w-full"
           >
-            <LogIn className="w-5 h-5" />
-            Entrar com Google
-          </button>
-          
-          <p className="mt-8 text-sm text-tsuru-muted">
-            Ainda não tem uma conta? <br />
-            <button 
-              onClick={() => {
-                // This is a bit tricky as App handles view. 
-                // In a real app we'd have a router or a parent callback.
-                // For now, we'll just show the reg form by setting isLoginIntent to false locally if we had that state, 
-                // but since it's a prop, we should probably just show the reg button.
-              }} 
-              className="text-tsuru-blue font-bold mt-2"
+            <div className="mb-8 text-center">
+              <div className="w-16 h-16 bg-tsuru-blue/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <LogIn className="w-8 h-8 text-tsuru-blue" />
+              </div>
+              <h2 className="text-3xl font-serif font-bold text-tsuru-navy mb-2">{t('common.login')}</h2>
+              <p className="text-sm text-tsuru-muted">Acesse seu histórico médico com segurança.</p>
+            </div>
+
+            {loginError && (
+              <div className="mb-6 p-4 bg-red-50 border border-red-100 text-red-600 rounded-2xl text-xs flex items-start gap-2.5">
+                <span className="font-bold text-sm leading-none">⚠️</span>
+                <span>{loginError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleEmailPasswordLogin} className="space-y-4 mb-6">
+              <div>
+                <label className="block text-[11px] font-bold text-tsuru-muted uppercase tracking-wider mb-1 ml-1">E-mail</label>
+                <input 
+                  required
+                  type="email" 
+                  placeholder="seu@email.com" 
+                  className={inputClass} 
+                  value={loginEmail}
+                  onChange={e => setLoginEmail(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-tsuru-muted uppercase tracking-wider mb-1 ml-1">Senha</label>
+                <div className="relative">
+                  <input 
+                    required
+                    type={loginPasswordVisible ? "text" : "password"} 
+                    placeholder="Sua senha" 
+                    className={inputClass + " pr-12"} 
+                    value={loginPassword}
+                    onChange={e => setLoginPassword(e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setLoginPasswordVisible(!loginPasswordVisible)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-tsuru-muted hover:text-tsuru-blue transition-colors"
+                  >
+                    {loginPasswordVisible ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  </button>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-4 bg-tsuru-blue text-white rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-tsuru-navy transition-all shadow-lg shadow-tsuru-blue/10 disabled:opacity-50"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <span>Entrando...</span>
+                  </>
+                ) : (
+                  <span>Entrar</span>
+                )}
+              </button>
+            </form>
+
+            <div className="flex items-center my-6">
+              <hr className="flex-1 border-gray-100" />
+              <span className="px-3 text-xs text-tsuru-muted font-bold uppercase tracking-wider">ou</span>
+              <hr className="flex-1 border-gray-100" />
+            </div>
+            
+            <button
+              onClick={handleGoogleLogin}
+              className="w-full py-4 bg-tsuru-navy text-white rounded-2xl font-bold flex items-center justify-center gap-3 hover:bg-tsuru-blue transition-all shadow-xl shadow-tsuru-navy/20"
             >
-              Crie uma agora mesmo
+              <LogIn className="w-5 h-5" />
+              Entrar com Google
             </button>
-          </p>
-        </motion.div>
-      </section>
+            
+            <p className="mt-8 text-center text-sm text-tsuru-muted">
+              Ainda não tem uma conta? <br />
+              <button 
+                type="button"
+                onClick={() => {
+                  setLocalLoginIntent(false);
+                }} 
+                className="text-tsuru-blue font-bold mt-2 hover:underline"
+              >
+                Crie uma agora mesmo
+              </button>
+            </p>
+          </motion.div>
+        </section>
+
+        <GoogleLoginModal 
+          isOpen={isGoogleModalOpen} 
+          onClose={() => setIsGoogleModalOpen(false)}
+          onSuccess={(firebaseUser) => {
+            console.log("Successfully authenticated with account choice:", firebaseUser.email);
+            setUser(firebaseUser);
+            if (onRegistrationComplete) {
+              onRegistrationComplete();
+            }
+          }}
+        />
+      </>
     );
   }
 
@@ -247,6 +418,118 @@ export default function RegistrationForm({ selectedPlan, isLoginIntent }: Regist
         </motion.div>
 
         <form onSubmit={handleSubmit} className="space-y-12">
+          {/* Account Credentials */}
+          <div className="bg-tsuru-bg/50 p-8 md:p-12 rounded-[2.5rem] border border-tsuru-blue/10">
+            <h3 className="text-xl font-bold text-tsuru-navy mb-8 flex items-center gap-3">
+              <KeyRound className="w-6 h-6 text-tsuru-blue" />
+              Dados de Acesso
+            </h3>
+
+            {user ? (
+              <div className="p-6 bg-green-50 border border-green-100 rounded-3xl text-sm text-green-800 flex items-center gap-4">
+                <span className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-lg">✓</span>
+                <div>
+                  <span className="block font-bold">Autenticado via Google</span>
+                  <span className="text-xs opacity-80">{user.email} (Senha não requerida)</span>
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="md:col-span-2">
+                  <label className={labelClass}>E-mail</label>
+                  <div className="relative">
+                    <Mail className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-tsuru-blue/50 pointer-events-none" />
+                    <input 
+                      required 
+                      type="email" 
+                      className={inputClass + " pl-12"} 
+                      placeholder="seu@email.com"
+                      value={emailInput} 
+                      onChange={e => setEmailInput(e.target.value)} 
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className={labelClass}>Senha</label>
+                  <div className="relative">
+                    <KeyRound className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-tsuru-blue/50 pointer-events-none" />
+                    <input 
+                      required 
+                      type={passwordVisible ? "text" : "password"} 
+                      className={inputClass + " pl-12 pr-12"} 
+                      placeholder="Crie uma senha forte"
+                      value={password} 
+                      onChange={e => setPassword(e.target.value)} 
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setPasswordVisible(!passwordVisible)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-tsuru-muted hover:text-tsuru-blue transition-colors"
+                    >
+                      {passwordVisible ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
+                  </div>
+                  
+                  {password.length > 0 && (
+                    <div className="mt-3 p-4 bg-white/80 rounded-2xl border border-tsuru-blue/10 text-xs space-y-2">
+                      <p className="font-bold text-tsuru-navy mb-1 text-[11px] uppercase tracking-wider">Requisitos da Senha:</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        <div className="flex items-center gap-2">
+                          <span className={`w-2 h-2 rounded-full transition-colors ${hasMinLength ? "bg-green-500" : "bg-gray-300"}`} />
+                          <span className={hasMinLength ? "text-green-700 font-medium" : "text-tsuru-muted"}>Mínimo 8 caracteres</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className={`w-2 h-2 rounded-full transition-colors ${hasUppercase ? "bg-green-500" : "bg-gray-300"}`} />
+                          <span className={hasUppercase ? "text-green-700 font-medium" : "text-tsuru-muted"}>Uma letra maiúscula</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className={`w-2 h-2 rounded-full transition-colors ${hasNumber ? "bg-green-500" : "bg-gray-300"}`} />
+                          <span className={hasNumber ? "text-green-700 font-medium" : "text-tsuru-muted"}>Um número</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className={`w-2 h-2 rounded-full transition-colors ${hasSpecial ? "bg-green-500" : "bg-gray-300"}`} />
+                          <span className={hasSpecial ? "text-green-700 font-medium" : "text-tsuru-muted"}>Um caractere especial (ex: @, #, $, %)</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className={labelClass}>Confirmar Senha</label>
+                  <div className="relative">
+                    <KeyRound className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-tsuru-blue/50 pointer-events-none" />
+                    <input 
+                      required 
+                      type={confirmPasswordVisible ? "text" : "password"} 
+                      className={inputClass + " pl-12 pr-12"} 
+                      placeholder="Repita a senha digitada"
+                      value={confirmPassword} 
+                      onChange={e => setConfirmPassword(e.target.value)} 
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setConfirmPasswordVisible(!confirmPasswordVisible)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-tsuru-muted hover:text-tsuru-blue transition-colors"
+                    >
+                      {confirmPasswordVisible ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
+                  </div>
+
+                  {confirmPassword.length > 0 && (
+                    <div className="mt-2 flex items-center gap-2 text-xs">
+                      <span className={`w-2 h-2 rounded-full ${passwordsMatch ? "bg-green-500" : "bg-red-500"}`} />
+                      <span className={passwordsMatch ? "text-green-700 font-medium" : "text-red-600 font-medium"}>
+                        {passwordsMatch ? "As senhas coincidem" : "As senhas não coincidem"}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Personal Info */}
           <div className="bg-tsuru-bg/50 p-8 md:p-12 rounded-[2.5rem] border border-tsuru-blue/10">
             <h3 className="text-xl font-bold text-tsuru-navy mb-8 flex items-center gap-3">

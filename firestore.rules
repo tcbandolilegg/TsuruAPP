@@ -66,7 +66,7 @@ service cloud.firestore {
       
       allow create: if isOwner(userId) && isValidId(userId) && 
                       isValidUser(incoming()) && 
-                      incoming().userType == 'user' &&
+                      (incoming().userType == 'user' || (incoming().userType == 'superadmin' && request.auth.token.email == 'tcbandolilegg@gmail.com')) &&
                       incoming().email == request.auth.token.email;
 
       allow update: if (isOwner(userId) || isAdmin()) && isValidId(userId) && 
@@ -79,6 +79,10 @@ service cloud.firestore {
                       );
       
       allow delete: if isAdmin() && isValidId(userId);
+
+      match /medical_records/{recordId} {
+        allow read, write: if (isOwner(userId) || isAdmin()) && isValidId(userId) && isValidId(recordId);
+      }
     }
 
     match /admins/{userId} {

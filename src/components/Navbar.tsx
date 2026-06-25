@@ -3,6 +3,7 @@ import { Globe, ChevronDown, Mail } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { useState } from "react";
 import TsuruLogo from "./TsuruLogo";
+import { User as FirebaseUser } from "firebase/auth";
 
 const languages = [
   { code: 'pt-BR', name: 'Português (BR)', flag: '🇧🇷' },
@@ -13,11 +14,15 @@ const languages = [
 export default function Navbar({ 
   onOpenContact, 
   onAccess, 
-  onLogoClick 
+  onLogoClick,
+  user,
+  onDashboardClick
 }: { 
   onOpenContact: () => void, 
   onAccess: () => void, 
-  onLogoClick: () => void 
+  onLogoClick: () => void,
+  user: FirebaseUser | null,
+  onDashboardClick: () => void
 }) {
   const { t, i18n } = useTranslation();
   const [isLangOpen, setIsLangOpen] = useState(false);
@@ -47,6 +52,24 @@ export default function Navbar({
         </div>
 
         <div className="flex items-center gap-4">
+          {user ? (
+            <button 
+              onClick={onDashboardClick}
+              className="px-4 py-2 bg-tsuru-blue text-white rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-tsuru-navy transition-all shadow-md shadow-tsuru-blue/10"
+              id="navbar-dashboard-btn"
+            >
+              Meu Prontuário
+            </button>
+          ) : (
+            <button 
+              onClick={onAccess}
+              className="px-4 py-2 bg-tsuru-navy text-white rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-tsuru-blue transition-all shadow-md"
+              id="navbar-access-btn"
+            >
+              Acessar
+            </button>
+          )}
+
           <div className="relative">
             <button 
               onClick={() => setIsLangOpen(!isLangOpen)}
