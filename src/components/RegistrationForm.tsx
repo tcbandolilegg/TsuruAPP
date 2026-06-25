@@ -1,21 +1,42 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Camera, MapPin, CreditCard, User, Calendar, FileText, ChevronDown, Check, LogIn, Loader2 } from "lucide-react";
+import { Camera, MapPin, CreditCard, User, Calendar, FileText, ChevronDown, Check, LogIn, Loader2, Copy, Download, QrCode, Wallet } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { signInWithPopup, GoogleAuthProvider, User as FirebaseUser } from 'firebase/auth';
 import { db, auth, handleFirestoreError, OperationType } from '../lib/firebase';
+import GoogleLoginModal from "./GoogleLoginModal";
 
 interface RegistrationFormProps {
   selectedPlan: string;
   isLoginIntent?: boolean;
 }
 
+const planPrices = {
+  dopamina: { mensal: "R$ 9,49", anual: "R$ 94,90" },
+  ocitocina: { mensal: "R$ 16,49", anual: "R$ 164,90" },
+  serotonina: { mensal: "R$ 36,49", anual: "R$ 364,90" },
+  endorfina: { mensal: "R$ 126,49", anual: "R$ 1.264,90" }
+};
+
 export default function RegistrationForm({ selectedPlan, isLoginIntent }: RegistrationFormProps) {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [user, setUser] = useState<FirebaseUser | null>(null);
+  const [isGoogleModalOpen, setIsGoogleModalOpen] = useState(false);
+
+  // Payment States
+  const [paymentMethod, setPaymentMethod] = useState<"cartao" | "pix" | "boleto">("cartao");
+  const [cardData, setCardData] = useState({
+    number: "",
+    name: "",
+    expiry: "",
+    cvv: ""
+  });
+  const [isCopied, setIsCopied] = useState(false);
+  const [isBoletoDownloading, setIsBoletoDownloading] = useState(false);
+
   const [formData, setFormData] = useState({
     photo: null as File | null,
     fullName: "",
@@ -54,12 +75,7 @@ export default function RegistrationForm({ selectedPlan, isLoginIntent }: Regist
     return () => unsubscribe();
   }, []);
 
-  useEffect(() => {
-    if (formData.plan === "dopamina") {
-      setFormData(prev => ({ ...prev, billingCycle: "mensal" }));
-    }
-  }, [formData.plan]);
-
+  // Removed restriction that forced dopamina to be monthly only, allowing annual for all plans
   useEffect(() => {
     const calculateValidity = () => {
       const today = new Date();
@@ -106,12 +122,7 @@ export default function RegistrationForm({ selectedPlan, isLoginIntent }: Regist
   };
 
   const handleGoogleLogin = async () => {
-    const provider = new GoogleAuthProvider();
-    try {
-      await signInWithPopup(auth, provider);
-    } catch (error) {
-      console.error("Login Error:", error);
-    }
+    setIsGoogleModalOpen(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -146,6 +157,9 @@ export default function RegistrationForm({ selectedPlan, isLoginIntent }: Regist
         billingCycle: formData.billingCycle,
         validityDate: formData.validityDate,
         userType: formData.userType,
+        paymentMethod: paymentMethod,
+        paymentStatus: paymentMethod === "cartao" ? "pago" : "pendente",
+        cardLast4: paymentMethod === "cartao" && cardData.number ? cardData.number.trim().slice(-4) : "",
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       };
@@ -322,7 +336,9 @@ export default function RegistrationForm({ selectedPlan, isLoginIntent }: Regist
             
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
               <div>
-                <label className={labelClass}>{t('registration.cep')}</label>
+                <label className={labelClass}>
+                  {t('registration.cep')} <span className="text-[11px] text-tsuru-muted/80 font-normal lowercase italic font-sans"> (apenas números)</span>
+                </label>
                 <input 
                   required 
                   maxLength={8}
@@ -409,54 +425,425 @@ export default function RegistrationForm({ selectedPlan, isLoginIntent }: Regist
             </div>
           </div>
 
-          {/* Plan Selection Sync */}
-          <div className="bg-tsuru-blue p-8 md:p-12 rounded-[2.5rem] text-white shadow-xl shadow-tsuru-blue/20">
+          {/* Plan Selection Sync with values shown next to it */}
+          <div className="bg-tsuru-navy p-8 md:p-12 rounded-[2.5rem] text-white shadow-xl shadow-tsuru-navy/20 border border-tsuru-blue/20">
+            <h3 className="text-xl font-bold mb-6 flex items-center gap-3 border-b border-white/10 pb-4">
+              <Calendar className="w-6 h-6 text-tsuru-blue" />
+              Seleção do Plano e Faturamento
+            </h3>
+            
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div>
-                <h3 className="text-sm font-bold uppercase tracking-widest mb-4 opacity-70">{t('registration.selectedPlan')}</h3>
+                <label className="block text-xs font-bold uppercase tracking-widest mb-3 text-white/70">
+                  {t('registration.selectedPlan')}
+                </label>
                 <div className="relative">
                   <select 
-                    className="w-full px-5 py-4 bg-white/10 border border-white/20 rounded-2xl outline-none focus:ring-2 focus:ring-white/20 transition-all text-white appearance-none cursor-pointer"
+                    className="w-full px-5 py-4 bg-white/10 border border-white/20 rounded-2xl outline-none focus:ring-2 focus:ring-white/30 transition-all text-white appearance-none cursor-pointer font-bold text-lg"
                     value={formData.plan}
                     onChange={e => setFormData(p => ({...p, plan: e.target.value}))}
                   >
-                    <option value="dopamina" className="text-tsuru-ink">{t('plans.dopamina.name')}</option>
-                    <option value="ocitocina" className="text-tsuru-ink">{t('plans.ocitocina.name')}</option>
-                    <option value="serotonina" className="text-tsuru-ink">{t('plans.serotonina.name')}</option>
-                    <option value="endorfina" className="text-tsuru-ink">{t('plans.endorfina.name')}</option>
+                    <option value="dopamina" className="text-tsuru-ink">DOPAMINA</option>
+                    <option value="ocitocina" className="text-tsuru-ink">OCITOCINA</option>
+                    <option value="serotonina" className="text-tsuru-ink">SEROTONINA</option>
+                    <option value="endorfina" className="text-tsuru-ink">ENDORFINA</option>
                   </select>
-                  <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 w-4 h-4 text-white pointer-events-none" />
+                  <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 w-5 h-5 text-white/70 pointer-events-none" />
                 </div>
+                
+                <p className="mt-4 text-xs text-white/60 leading-relaxed">
+                  Ao selecionar um plano, você pode escolher o ciclo de faturamento mensal ou anual ao lado. O plano anual concede vantagens e vigência de 1 ano.
+                </p>
               </div>
 
               <div>
-                <h3 className="text-sm font-bold uppercase tracking-widest mb-4 opacity-70">{t('registration.billingCycle')}</h3>
-                <div className="relative">
-                  <select 
-                    disabled={formData.plan === 'dopamina'}
-                    className="w-full px-5 py-4 bg-white/10 border border-white/20 rounded-2xl outline-none focus:ring-2 focus:ring-white/20 transition-all text-white appearance-none cursor-pointer disabled:opacity-50"
-                    value={formData.plan === 'dopamina' ? 'mensal' : formData.billingCycle}
-                    onChange={e => setFormData(p => ({...p, billingCycle: e.target.value as "mensal" | "anual"}))}
+                <label className="block text-xs font-bold uppercase tracking-widest mb-3 text-white/70">
+                  Opções de Valores para o Plano {formData.plan.toUpperCase()}
+                </label>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Monthly Option Card */}
+                  <button
+                    type="button"
+                    onClick={() => setFormData(p => ({ ...p, billingCycle: "mensal" }))}
+                    className={`p-4 rounded-2xl border text-left transition-all flex flex-col justify-between ${
+                      formData.billingCycle === "mensal"
+                        ? "border-tsuru-blue bg-white/10 ring-2 ring-tsuru-blue"
+                        : "border-white/10 bg-white/5 hover:bg-white/10"
+                    }`}
                   >
-                    <option value="mensal" className="text-tsuru-ink">{t('registration.mensal')}</option>
-                    <option value="anual" className="text-tsuru-ink">{t('registration.anual')}</option>
-                  </select>
-                  <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 w-4 h-4 text-white pointer-events-none" />
+                    <div>
+                      <span className="text-xs uppercase tracking-wider font-bold opacity-60">Mensal</span>
+                      <div className="text-xl font-extrabold mt-1 text-white">
+                        {planPrices[formData.plan as keyof typeof planPrices]?.mensal || "R$ 0,00"}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1.5 mt-3 text-[10px] text-white/80">
+                      {formData.billingCycle === "mensal" ? (
+                        <span className="w-2 h-2 rounded-full bg-tsuru-blue" />
+                      ) : (
+                        <span className="w-2 h-2 rounded-full bg-white/30" />
+                      )}
+                      <span>Selecionado</span>
+                    </div>
+                  </button>
+
+                  {/* Annual Option Card */}
+                  <button
+                    type="button"
+                    onClick={() => setFormData(p => ({ ...p, billingCycle: "anual" }))}
+                    className={`p-4 rounded-2xl border text-left transition-all flex flex-col justify-between ${
+                      formData.billingCycle === "anual"
+                        ? "border-tsuru-blue bg-white/10 ring-2 ring-tsuru-blue"
+                        : "border-white/10 bg-white/5 hover:bg-white/10"
+                    }`}
+                  >
+                    <div>
+                      <span className="text-xs uppercase tracking-wider font-bold opacity-60">Anual</span>
+                      <div className="text-xl font-extrabold mt-1 text-white">
+                        {planPrices[formData.plan as keyof typeof planPrices]?.anual || "R$ 0,00"}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1.5 mt-3 text-[10px] text-white/80">
+                      {formData.billingCycle === "anual" ? (
+                        <span className="w-2 h-2 rounded-full bg-tsuru-blue" />
+                      ) : (
+                        <span className="w-2 h-2 rounded-full bg-white/30" />
+                      )}
+                      <span>Selecionado</span>
+                    </div>
+                  </button>
                 </div>
               </div>
 
-              <div className="md:col-span-2 pt-4 border-t border-white/10">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <Calendar className="w-5 h-5 opacity-70" />
-                    <span className="font-bold uppercase tracking-widest text-sm opacity-70">{t('registration.planValidity')}</span>
+              <div className="md:col-span-2 pt-6 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center">
+                    <Calendar className="w-5 h-5 text-tsuru-blue" />
                   </div>
-                  <span className="text-2xl font-bold">
+                  <div>
+                    <span className="block text-xs uppercase tracking-widest font-bold text-white/60">Ciclo Ativo</span>
+                    <span className="text-sm font-bold capitalize">Faturamento {formData.billingCycle}</span>
+                  </div>
+                </div>
+
+                <div className="text-right sm:text-right w-full sm:w-auto">
+                  <span className="block text-xs uppercase tracking-widest font-bold text-white/60 mb-1">Data de Vencimento / Vigência</span>
+                  <span className="text-2xl font-black text-tsuru-blue">
                     {formData.validityDate ? new Date(formData.validityDate + 'T12:00:00').toLocaleDateString('pt-BR') : '-'}
                   </span>
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* Payment Method section */}
+          <div className="bg-tsuru-bg/50 p-8 md:p-12 rounded-[2.5rem] border border-tsuru-blue/10">
+            <h3 className="text-xl font-bold text-tsuru-navy mb-4 flex items-center gap-3">
+              <CreditCard className="w-6 h-6 text-tsuru-blue" />
+              Método de Pagamento
+            </h3>
+            <p className="text-sm text-tsuru-muted mb-8">
+              Selecione sua forma de pagamento preferida para ativar sua conta Tsuru Health.
+            </p>
+
+            {/* Method selection tabs */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+              {/* Credit Card Button */}
+              <button
+                type="button"
+                onClick={() => setPaymentMethod("cartao")}
+                className={`p-5 rounded-2xl border text-left flex items-center gap-4 transition-all ${
+                  paymentMethod === "cartao"
+                    ? "border-tsuru-blue bg-white shadow-md ring-1 ring-tsuru-blue"
+                    : "border-gray-200 bg-white/60 hover:bg-white"
+                }`}
+              >
+                <div className={`p-3 rounded-xl ${paymentMethod === "cartao" ? "bg-tsuru-blue/10 text-tsuru-blue" : "bg-gray-100 text-gray-500"}`}>
+                  <CreditCard className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="font-bold text-sm text-tsuru-navy">Cartão de Crédito</div>
+                  <div className="text-xs text-tsuru-muted">Ativação instantânea</div>
+                </div>
+              </button>
+
+              {/* PIX Button */}
+              <button
+                type="button"
+                onClick={() => setPaymentMethod("pix")}
+                className={`p-5 rounded-2xl border text-left flex items-center gap-4 transition-all ${
+                  paymentMethod === "pix"
+                    ? "border-tsuru-blue bg-white shadow-md ring-1 ring-tsuru-blue"
+                    : "border-gray-200 bg-white/60 hover:bg-white"
+                }`}
+              >
+                <div className={`p-3 rounded-xl ${paymentMethod === "pix" ? "bg-tsuru-blue/10 text-tsuru-blue" : "bg-gray-100 text-gray-500"}`}>
+                  <QrCode className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="font-bold text-sm text-tsuru-navy">PIX</div>
+                  <div className="text-xs text-tsuru-muted">Aprovação imediata</div>
+                </div>
+              </button>
+
+              {/* Boleto Button */}
+              <button
+                type="button"
+                onClick={() => setPaymentMethod("boleto")}
+                className={`p-5 rounded-2xl border text-left flex items-center gap-4 transition-all ${
+                  paymentMethod === "boleto"
+                    ? "border-tsuru-blue bg-white shadow-md ring-1 ring-tsuru-blue"
+                    : "border-gray-200 bg-white/60 hover:bg-white"
+                }`}
+              >
+                <div className={`p-3 rounded-xl ${paymentMethod === "boleto" ? "bg-tsuru-blue/10 text-tsuru-blue" : "bg-gray-100 text-gray-500"}`}>
+                  <FileText className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="font-bold text-sm text-tsuru-navy">Boleto Bancário</div>
+                  <div className="text-xs text-tsuru-muted">Compensação 1-2 dias</div>
+                </div>
+              </button>
+            </div>
+
+            {/* Method Details Panels */}
+            <AnimatePresence mode="wait">
+              {paymentMethod === "cartao" && (
+                <motion.div
+                  key="cartao"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="space-y-6 bg-white p-6 md:p-8 rounded-2xl border border-gray-100"
+                >
+                  <h4 className="font-bold text-tsuru-navy text-sm border-b border-gray-100 pb-3 flex items-center gap-2">
+                    <CreditCard className="w-4 h-4 text-tsuru-blue" />
+                    Dados do Cartão de Crédito
+                  </h4>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="md:col-span-2">
+                      <label className={labelClass}>Número do Cartão</label>
+                      <input
+                        type="text"
+                        required={paymentMethod === "cartao"}
+                        maxLength={19}
+                        placeholder="0000 0000 0000 0000"
+                        className={inputClass}
+                        value={cardData.number}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/\D/g, "").replace(/(.{4})/g, "$1 ").trim();
+                          setCardData({ ...cardData, number: val });
+                        }}
+                      />
+                    </div>
+
+                    <div className="md:col-span-2">
+                      <label className={labelClass}>Nome Impresso no Cartão</label>
+                      <input
+                        type="text"
+                        required={paymentMethod === "cartao"}
+                        placeholder="NOME COMPLETO"
+                        className={inputClass + " uppercase"}
+                        value={cardData.name}
+                        onChange={(e) => setCardData({ ...cardData, name: e.target.value })}
+                      />
+                    </div>
+
+                    <div>
+                      <label className={labelClass}>Validade (MM/AA)</label>
+                      <input
+                        type="text"
+                        required={paymentMethod === "cartao"}
+                        maxLength={5}
+                        placeholder="MM/AA"
+                        className={inputClass}
+                        value={cardData.expiry}
+                        onChange={(e) => {
+                          let val = e.target.value.replace(/\D/g, "");
+                          if (val.length > 2) {
+                            val = `${val.slice(0, 2)}/${val.slice(2, 4)}`;
+                          }
+                          setCardData({ ...cardData, expiry: val });
+                        }}
+                      />
+                    </div>
+
+                    <div>
+                      <label className={labelClass}>Código de Segurança (CVV)</label>
+                      <input
+                        type="text"
+                        required={paymentMethod === "cartao"}
+                        maxLength={4}
+                        placeholder="123"
+                        className={inputClass}
+                        value={cardData.cvv}
+                        onChange={(e) => setCardData({ ...cardData, cvv: e.target.value.replace(/\D/g, "") })}
+                      />
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
+              {paymentMethod === "pix" && (
+                <motion.div
+                  key="pix"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="bg-white p-6 md:p-8 rounded-2xl border border-gray-100 flex flex-col items-center text-center space-y-6"
+                >
+                  <h4 className="font-bold text-tsuru-navy text-sm border-b border-gray-100 pb-3 w-full text-left flex items-center gap-2">
+                    <QrCode className="w-4 h-4 text-tsuru-blue" />
+                    Pagamento via PIX Instantâneo
+                  </h4>
+
+                  {/* Visual QR Code simulation */}
+                  <div className="relative p-4 bg-gray-50 border border-gray-200 rounded-2xl flex flex-col items-center justify-center">
+                    <div className="w-44 h-44 bg-white border-2 border-dashed border-tsuru-blue/20 rounded-xl flex items-center justify-center overflow-hidden">
+                      {/* Stylized QR Code placeholder */}
+                      <div className="relative w-36 h-36 flex flex-col justify-between p-2">
+                        <div className="flex justify-between">
+                          <div className="w-8 h-8 border-4 border-tsuru-navy" />
+                          <div className="w-8 h-8 border-4 border-tsuru-navy" />
+                        </div>
+                        {/* Interactive scan line */}
+                        <div className="absolute left-0 right-0 h-0.5 bg-tsuru-blue animate-bounce opacity-70" />
+                        
+                        {/* Mock QR content dots */}
+                        <div className="flex flex-wrap gap-1 justify-center opacity-80 select-none pointer-events-none p-1">
+                          {Array.from({ length: 48 }).map((_, i) => (
+                            <div key={i} className={`w-1.5 h-1.5 rounded-sm ${i % 3 === 0 || i % 7 === 0 ? "bg-tsuru-navy" : "bg-transparent"}`} />
+                          ))}
+                        </div>
+                        <div className="flex justify-between">
+                          <div className="w-8 h-8 border-4 border-tsuru-navy" />
+                          <div className="w-8 h-8 border-t-4 border-l-4 border-tsuru-navy" />
+                        </div>
+                      </div>
+                    </div>
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-tsuru-blue mt-2">QR Code Tsuru Oficial</span>
+                  </div>
+
+                  <div className="max-w-md space-y-4">
+                    <p className="text-xs text-tsuru-muted">
+                      Escaneie o código acima usando o aplicativo do seu banco ou copie a Chave PIX fornecida abaixo.
+                    </p>
+
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        readOnly
+                        className="flex-1 bg-gray-50 border border-gray-200 px-4 py-3 rounded-xl text-xs font-mono text-tsuru-navy outline-none"
+                        value="contato@tsuru.app.br"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText("contato@tsuru.app.br");
+                          setIsCopied(true);
+                          setTimeout(() => setIsCopied(false), 2000);
+                        }}
+                        className="px-4 py-3 bg-tsuru-navy hover:bg-tsuru-blue text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0"
+                      >
+                        <Copy className="w-3.5 h-3.5" />
+                        {isCopied ? "Copiado!" : "Copiar"}
+                      </button>
+                    </div>
+
+                    <div className="flex items-center justify-center gap-2 text-[10px] font-bold text-green-600 bg-green-50 py-2 px-4 rounded-full border border-green-200 inline-block">
+                      <Check className="w-3.5 h-3.5" />
+                      <span>Aprovação e ativação em menos de 1 minuto</span>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
+              {paymentMethod === "boleto" && (
+                <motion.div
+                  key="boleto"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="bg-white p-6 md:p-8 rounded-2xl border border-gray-100 space-y-6"
+                >
+                  <h4 className="font-bold text-tsuru-navy text-sm border-b border-gray-100 pb-3 w-full text-left flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-tsuru-blue" />
+                    Pagamento por Boleto Bancário
+                  </h4>
+
+                  <div className="p-6 bg-amber-50/50 border border-amber-200/60 rounded-2xl flex flex-col md:flex-row items-center gap-5">
+                    <div className="p-4 bg-amber-100/60 rounded-full text-amber-800">
+                      <FileText className="w-8 h-8" />
+                    </div>
+                    <div className="text-center md:text-left space-y-1">
+                      <div className="font-bold text-sm text-amber-900">Atenção ao prazo de liberação</div>
+                      <p className="text-xs text-amber-800 max-w-lg">
+                        Boletos levam entre 1 a 2 dias úteis para compensação bancária automática pelo sistema. Sua conta do Tsuru será ativada imediatamente após recebermos a confirmação.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className={labelClass}>Linha Digitável do Boleto</label>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          readOnly
+                          className="flex-1 bg-gray-50 border border-gray-200 px-4 py-3 rounded-xl text-xs font-mono text-tsuru-navy outline-none"
+                          value="34191.79001 01043.513184 91020.150008 7 934500000"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText("34191.79001 01043.513184 91020.150008 7 934500000");
+                            setIsCopied(true);
+                            setTimeout(() => setIsCopied(false), 2000);
+                          }}
+                          className="px-4 py-3 bg-tsuru-navy hover:bg-tsuru-blue text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shrink-0"
+                        >
+                          <Copy className="w-3.5 h-3.5" />
+                          {isCopied ? "Copiado!" : "Copiar"}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="pt-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-gray-100">
+                      <div className="text-xs text-tsuru-muted text-center sm:text-left">
+                        Você também pode baixar o documento oficial do boleto em formato PDF para impressão ou leitura de código de barras.
+                      </div>
+                      
+                      <button
+                        type="button"
+                        disabled={isBoletoDownloading}
+                        onClick={() => {
+                          setIsBoletoDownloading(true);
+                          setTimeout(() => {
+                            setIsBoletoDownloading(false);
+                            alert("Download do Boleto Tsuru_Assinatura.pdf iniciado com sucesso!");
+                          }, 1500);
+                        }}
+                        className="px-5 py-3.5 bg-tsuru-blue hover:bg-tsuru-navy text-white rounded-xl text-xs font-bold transition-all flex items-center gap-2 shadow-md w-full sm:w-auto justify-center"
+                      >
+                        {isBoletoDownloading ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            Gerando PDF...
+                          </>
+                        ) : (
+                          <>
+                            <Download className="w-4 h-4" />
+                            Baixar Boleto PDF
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
           <motion.button
@@ -482,6 +869,14 @@ export default function RegistrationForm({ selectedPlan, isLoginIntent }: Regist
           </motion.button>
         </form>
       </div>
+
+      <GoogleLoginModal 
+        isOpen={isGoogleModalOpen} 
+        onClose={() => setIsGoogleModalOpen(false)}
+        onSuccess={(firebaseUser) => {
+          console.log("Successfully authenticated with account choice:", firebaseUser.email);
+        }}
+      />
     </section>
   );
 }

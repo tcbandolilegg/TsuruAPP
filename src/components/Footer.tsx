@@ -25,15 +25,28 @@ export default function Footer({ onOpenContact, onLogoClick }: { onOpenContact: 
           <div className="flex flex-col gap-3">
             <h4 className="text-tsuru-blue font-bold uppercase tracking-widest text-[10px] mb-1">Social</h4>
             <div className="flex flex-col gap-2">
-              <a href="#" className="flex items-center gap-2 text-gray-400 hover:text-tsuru-blue transition-colors group text-sm">
+              <a 
+                href="https://www.instagram.com/tsuru_oficial/" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="flex items-center gap-2 text-gray-400 hover:text-tsuru-blue transition-colors group text-sm"
+              >
                 <Instagram className="w-4 h-4" />
                 <span>Instagram</span>
               </a>
-              <a href="#" className="flex items-center gap-2 text-gray-400 hover:text-tsuru-blue transition-colors group text-sm">
+              <a 
+                href="https://www.facebook.com/tsuru.saude" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="flex items-center gap-2 text-gray-400 hover:text-tsuru-blue transition-colors group text-sm"
+              >
                 <Facebook className="w-4 h-4" />
                 <span>Facebook</span>
               </a>
-              <a href="#" className="flex items-center gap-2 text-gray-400 hover:text-tsuru-blue transition-colors group text-sm">
+              <a 
+                href="mailto:contato@tsuru.app.br" 
+                className="flex items-center gap-2 text-gray-400 hover:text-tsuru-blue transition-colors group text-sm"
+              >
                 <Mail className="w-4 h-4" />
                 <span>E-mail</span>
               </a>
@@ -50,18 +63,7 @@ export default function Footer({ onOpenContact, onLogoClick }: { onOpenContact: 
           </div>
         </div>
 
-        <div className="flex flex-col items-center mb-6">
-          <a 
-            href="https://www.ascenderideias.com.br" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="group flex items-center"
-          >
-            <span className="text-gray-500 group-hover:text-white text-[20px] transition-colors italic">
-              mais um projeto <span className="font-bold not-italic">Ascender Ideias</span>
-            </span>
-          </a>
-        </div>
+
 
         <div className="pt-6 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-4 text-center md:text-left">
           <p className="text-gray-500 text-sm">
